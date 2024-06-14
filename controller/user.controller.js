@@ -7,37 +7,25 @@ import userModel from "../model/user.js";
 const cwd = process.cwd();
 const viewPath = path.join(cwd, "view");
 
-const loginForm = fs.readFileSync(path.join(viewPath, "login.html"), {
-  encoding: "utf8",
-});
-const registerForm = fs.readFileSync(path.join(viewPath, "register.html"), {
-  encoding: "utf8",
-});
-const nav = fs.readFileSync(path.join(viewPath, "nav.html"), {
-  encoding: "utf8",
-});
 export async function register(req, res) {
   const { firstName, lastName, email, password, confirmPassword } = req.body;
 
   if (!firstName || !lastName || !email || !password || !confirmPassword) {
-    const error = "All fields are required.";
-    const html = body(nav + `<p>${error}</p>` + registerForm);
-    return res.status(400).send(html);
+    req.session.message = { text: "All fields are required.", type: "error" };
+    return res.status(400).redirect("/");
   }
 
   if (password !== confirmPassword) {
-    const error = "Passwords do not match.";
-    const html = body(nav + `<p>${error}</p>` + registerForm);
-    return res.status(400).send(html);
+    req.session.message = { text: "Passwords do not match.", type: "error" };
+    return res.status(400).redirect("/");
   }
 
   try {
     const existingUser = await userModel.findOne({ email });
 
     if (existingUser) {
-      const error = "User already exists.";
-      const html = body(nav + `<p>${error}</p>` + registerForm);
-      return res.status(400).send(html);
+      req.session.message = { text: "Email already exists.", type: "error" };
+      return res.status(400).redirect("/");
     }
 
     const hashedPassword = crypto
@@ -53,30 +41,31 @@ export async function register(req, res) {
     });
 
     await user.save().then(() => {
+      req.session.message = {
+        text: "Registration successful.",
+        type: "success",
+      };
       res.redirect("/login");
     });
   } catch (err) {
-    const error = "An error occurred.";
-    const html = body(nav + `<p>${error}</p>` + registerForm);
-    res.status(500).send(html);
+    req.session.message = { text: "An error occurred.", type: "error" };
+    res.status(500).redirect("/");
   }
 }
 export async function login(req, res) {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    const error = "All fields are required.";
-    const html = body(nav + `<p>${error}</p>` + loginForm);
-    return res.status(400).send(html);
+    req.session.message = { text: "All fields are required.", type: "error" };
+    return res.status(400).redirect("/login");
   }
 
   try {
     const user = await userModel.findOne({ email });
 
     if (!user) {
-      const error = "Invalid email or password.";
-      const html = body(nav + `<p>${error}</p>` + loginForm);
-      return res.status(400).send(html);
+      req.session.message = { text: "User not found.", type: "error" };
+      return res.status(400).redirect("/login");
     }
 
     const hashedPassword = crypto
@@ -85,21 +74,30 @@ export async function login(req, res) {
       .digest("hex");
 
     if (user.password !== hashedPassword) {
-      const error = "Invalid email or password.";
-      const html = body(nav + `<p>${error}</p>` + loginForm);
-      return res.status(400).send(html);
+      req.session.message = {
+        text: "Invalid email or password.",
+        type: "error",
+      };
+      return res.status(400).redirect("/login");
     }
 
     req.session.user = user;
+    req.session.message = { text: "Login successful.", type: "success" };
     res.redirect("/dashboard");
   } catch (err) {
-    const error = "An error occurred.";
-    const html = body(nav + `<p>${error}</p>` + loginForm);
-    res.status(500).send(html);
+    req.session.message = { text: "An error occurred.", type: "error" };
+    res.status(500).redirect("/login");
   }
 }
 
 export const logout = (req, res) => {
-  req.session.destroy();
-  res.redirect("/");
+  req.session.regenerate((err) => {
+    if (err) {
+      console.log(err);
+      req.session.message = { text: "Logout unsuccessful.", type: "error" };
+    } else {
+      req.session.message = { text: "Logout successful.", type: "success" };
+    }
+    res.redirect("/");
+  });
 };
