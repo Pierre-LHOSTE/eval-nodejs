@@ -3,12 +3,11 @@ import {
   getDashboard,
   getLoginForm,
   getRegisterForm,
-  getMainPage,
 } from "../controller/nav.controller.js";
 
 const router = express.Router();
 
-router.get("/", getMainPage);
+router.get("/", getRegisterForm);
 router.get("/login", getLoginForm);
 router.get("/dashboard", getDashboard);
 

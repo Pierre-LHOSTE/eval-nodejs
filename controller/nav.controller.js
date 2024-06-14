@@ -16,20 +16,6 @@ const registerForm = fs.readFileSync(path.join(viewPath, "register.html"), {
   encoding: "utf8",
 });
 
-export function getMainPage(req, res) {
-  if (req.session.user) {
-    const html = body(
-      nav +
-        `<div class="py-6 px-9 bg-white rounded-md">
-        You are already logged in.
-      </div>`
-    );
-    res.status(200).send(html);
-  } else {
-    getRegisterForm(req, res);
-  }
-}
-
 export function getLoginForm(req, res) {
   const nav = fs.readFileSync(path.join(viewPath, "nav.html"), {
     encoding: "utf8",
